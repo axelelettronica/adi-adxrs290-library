@@ -13,7 +13,7 @@ Host control and result reading is performed using an SPI interface, no extra pi
 It was principally designed to work with the ADI board, but could
 be easily adapt and use on every Arduino and Arduino Certified boards.
 
-Written by Mik <smkk@axelelettronica>.
+Written by Seve <seve@axelelettronica>.
 
 ## Repository Contents
 -------------------
