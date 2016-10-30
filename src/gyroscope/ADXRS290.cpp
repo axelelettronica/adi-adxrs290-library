@@ -5,10 +5,9 @@
  *  Author: searobin
  */
 
-#include <Wire.h>
-#include <SPI.h>
 #include "ADXRS290Reg.h"
 #include "ADXRS290.h"
+#include <SPI.h>
 
 const byte READ  = 0b10000000;     // read command
 const byte WRITE = 0b01111111;     // write command
@@ -19,25 +18,26 @@ unsigned int
 ADXRS290::readRegister(byte thisRegister, int bytesToRead) {
     byte inByte = 0;           // incoming byte from the SPI
     unsigned int result = 0;   // result to return
-
+ 
+    delay(100);
     // now combine the address and the command into one byte
     volatile byte dataToSend = thisRegister | READ;
-    SPI1.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE3));
-    //delay(2);
+   _spi->beginTransaction(SPISettings(5000000, MSBFIRST, SPI_MODE3));
     
     // take the chip select low to select the device:
     digitalWrite(_ss, LOW);
+    delay(2);
     // send the device the register you want to read:
-    SPI1.transfer(dataToSend);
+    _spi->transfer(dataToSend);
     // send a value of 0 to read the first byte returned:
-    result = SPI1.transfer(0x00);
+    result = _spi->transfer(0x00);
     // decrement the number of bytes left to read:
     bytesToRead--;
     // if you still have another byte to read:
     if (bytesToRead > 0) {
         // shift the first byte left, then get the second byte:
         result = result << 8;
-        inByte = SPI1.transfer(0x00);
+        inByte = _spi->transfer(0x00);
         // combine the byte you just got with the previous one:
         result = result | inByte;
         // decrement the number of bytes left to read:
@@ -47,7 +47,7 @@ ADXRS290::readRegister(byte thisRegister, int bytesToRead) {
     // take the chip select high to de-select:
     digitalWrite(_ss, HIGH);
 
-    SPI1.endTransaction();
+    _spi->endTransaction();
     return (result);
 }
 
@@ -56,18 +56,20 @@ ADXRS290::writeRegister(byte thisRegister, byte thisValue) {
 
   // now combine the register address and the command into one byte:
   byte dataToSend = thisRegister & WRITE;
-  
-  SPI1.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE3));
-  
+
+  delay(100); 
+  _spi->beginTransaction(SPISettings(5000000, MSBFIRST, SPI_MODE3));
+
   // take the chip select low to select the device:
   digitalWrite(_ss, LOW);
   //delay(2);
-  SPI1.transfer(dataToSend); //Send register location
-  SPI1.transfer(thisValue);  //Send value to record into register
+  _spi->transfer(dataToSend); //Send register location
+  _spi->transfer(thisValue);  //Send value to record into register
   // take the chip select high to de-select:
   digitalWrite(_ss, HIGH);
   
-  SPI1.endTransaction();
+  _spi->endTransaction();
+
 }
 
 
@@ -80,46 +82,38 @@ ADXRS290::readByteInternal(uint8_t address)
 void
 ADXRS290::writeByteInternal(uint8_t address, uint8_t data)
 {
-    readRegister(address, data);
+   writeRegister(address, data);
 }
 
 
 /**** *************************************************************************/
 /*                                 Gyroscope                                 */
 /*****************************************************************************/
-
-ADXRS290::ADXRS290(uint8_t clk, uint8_t miso, uint8_t mosi, uint8_t ss, uint8_t irq):
-_clk(clk),
-_miso(miso),
-_mosi(mosi),
-_ss(ss),
-_irq(irq)
-//_reset(0),
-//_//usingSPI(true),
-//_//hardwareSPI(false)
-{
-    pinMode(_ss, OUTPUT);
-    //pinMode(_irq, INPUT);
-
-
-}
-bool ADXRS290::begin(void)
+char ADXRS290::begin(uint8_t ss, SPIClass *spi,  uint8_t irq)
 {
     volatile uint8_t data;
-
+    
+    this->_irq = irq;   
+    this->_spi = spi;
+    this->_ss = ss;
+    
+    pinMode(_ss, OUTPUT);
+    digitalWrite(_ss, HIGH);
+    
+    standbyModeEnable(false);
     data = readByteInternal(ADXRS290_ANALOG_ID);  
     if (data != ADXRS290_ANALOG_ID_RETURN){
         // Wrong Device ID
-        return false;
+        return -1;
     }
 
     data = readByteInternal(ADXRS290_MEMS_ID);  
     if (data != ADXRS290_MEMS_ID_RETURN){
         // Wrong MEMS ID
-        return false;
+        return -1;
     }
 
-    return true;
+    return 0;
 }
 
 void 
@@ -200,10 +194,10 @@ ADXRS290::readX()
     int16_t signed_data = 0;
 
     // send the device the register you want to read:  
-    SPI1.transfer(ADXRS290_GYR_X_L);  
+    _spi->transfer(ADXRS290_GYR_X_L);  
     // send a value of 0 to read the first byte returned:  
-    lsb = SPI1.transfer(0xFF); 
-    msb = SPI1.transfer(0xFF); 
+    lsb = _spi->transfer(0xFF); 
+    msb = _spi->transfer(0xFF); 
 
     data = lsb;
     data |= msb << 8; // MSB
@@ -223,10 +217,10 @@ ADXRS290::readY()
     int16_t signed_data = 0;
 
     // send the device the register you want to read:  
-    SPI1.transfer(ADXRS290_GYR_Y_L);  
+    _spi->transfer(ADXRS290_GYR_Y_L);  
     // send a value of 0 to read the first byte returned:  
-    lsb = SPI1.transfer(0xFF); 
-    msb = SPI1.transfer(0xFF); 
+    lsb = _spi->transfer(0xFF); 
+    msb = _spi->transfer(0xFF); 
 
     data = lsb;
     data |= msb << 8; // MSB
@@ -246,13 +240,13 @@ ADXRS290::readTemperature()
     int16_t signed_data = 0;
 
     // send the device the register you want to read:  
-    SPI1.transfer(ADXRS290_TEMP_L);  
+    _spi->transfer(ADXRS290_TEMP_L);  
     // send a value of 0 to read the first byte returned:  
-    lsb = SPI1.transfer(0xFF); 
-    msb = SPI1.transfer(0xFF); 
+    lsb = _spi->transfer(0xFF); 
+    msb = _spi->transfer(0xFF); 
 
     data = lsb;
-    data |= (0xF & msb) << 8; // MSB
+    data |= (0xFF & msb) << 8; // MSB
 
     // HOW CONVERT 12 bit complemetn 2 ???
     signed_data = (int16_t)data;
@@ -263,5 +257,4 @@ ADXRS290::readTemperature()
 }
 
 
-
-//ADXRS290 adiGyroscope;
+ADXRS290 adiGyroscope;

@@ -1,5 +1,5 @@
 /*
- * LSM9DS1Reg.h
+ * ADXRS290Reg.h
  *
  * Created: 05/06/2016 14:17:29
  *  Author: searobin
@@ -38,7 +38,7 @@
 // 12 2-complement's bits
 #define ADXRS290_TEMP_L           0x0C  // 7..0 bits
 #define ADXRS290_TEMP_H           0x0D  // 11..8 bits
-#define ADXRS290_TEMP_SCALE_FACT  10  // 10 LSB /centig deg. 0 mean s o deg.
+#define ADXRS290_TEMP_SCALE_FACT  10.0  // 10 LSB /centig deg. 0 mean s o deg.
 
 // The LSB controls Temperature sensor. 1 enable, 0 disable
 #define ADXRS290_POW_CTRL_REG     0x10

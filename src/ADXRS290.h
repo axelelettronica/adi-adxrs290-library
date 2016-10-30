@@ -5,22 +5,26 @@
  *  Author: searobin
  */
 
-#ifndef ADXRS290_SENSOR_H_
-#define ADXRS290_SENSOR_H_
+#ifndef __ADXRS290_H__
+#define __ADXRS290_H__
 
 #include <Arduino.h>
-
+//#include "ADXRS290Reg.h"
+#include <SPI.h>
 
 class ADXRS290
 {
 private:
-    uint8_t _address;
-    uint8_t  _clk, _miso, _mosi, _ss, _irq;
-
+    uint8_t  _address;
+    uint8_t  _ss;
+    uint8_t  _irq;
+    SPIClass *_spi;
+    
 public:
-   // ADXRS290() {}
-    ADXRS290(uint8_t _sck, uint8_t _miso,uint8_t _mosi, uint8_t _ss, uint8_t _irq = 0);
+    ADXRS290() {}
+    char begin(uint8_t ss, SPIClass *spi=&SPI1,  uint8_t irq = 0);       
     ~ADXRS290() {}
+
 
 protected:
     uint8_t readByteInternal(uint8_t address);
@@ -29,7 +33,6 @@ protected:
     void writeRegister(byte thisRegister, byte thisValue);
 
 public:
-    bool begin(void);
     void standbyModeEnable(bool standbyMode);
 
     void setLowPassFilter(int lowFreqPole);
@@ -45,6 +48,6 @@ public:
     //int readSerialNumber();
 };
 
-//extern  ADXRS290 adiGyroscope;
+extern  ADXRS290 adiGyroscope;
 
 #endif /* ADXRS290_H_ */

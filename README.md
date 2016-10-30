@@ -1,19 +1,17 @@
 # ADI Board Analog Device ADXRS290  2-Axis, gyroscope.
 ----
 This is a library for the ST ADXRS290 component.
-The ADXRS290 is a high performance MEMS pitch and roll (dual-axis in-plane) 
-angular rate sensor (gyroscope) designed for use in stabilization applications.
+The ADXRS290 is a high performance angular rate sensor (gyroscope)
+designed for use in stabilization applications.
 
-
-
-[* ST LSM9DS1 Home Page *](http://www.analog.com/en/products/mems/mems-gyroscopes/adxrs290.html)
+[* ADI ADXRS290 Home Page *](http://www.analog.com/en/products/mems/mems-gyroscopes/adxrs290.html)
 
 Host control and result reading is performed using an SPI interface, no extra pin are required.
 
 It was principally designed to work with the ADI board, but could
-be easily adapt and use on every Arduino and Arduino Certified boards.
+be used on every Arduino and Arduino Certified boards.
 
-Written by Seve <seve@axelelettronica>.
+Written by Seve <seve@ioteam.it>.
 
 ## Repository Contents
 -------------------
