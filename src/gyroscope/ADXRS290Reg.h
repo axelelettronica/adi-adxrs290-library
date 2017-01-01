@@ -20,7 +20,7 @@
 #define ADXRS290_DEV_ID           0x02
 #define ADXRS290_DEV_ID_RETURN    0x92
 
-#define ADXRS290_REV_NUM          0x01
+#define ADXRS290_REV_NUM          0x03
 #define ADXRS290_REV_NUM_RETURN   0x1D
 
 #define ADXRS290_SERIALNUM_START  0x04
@@ -51,7 +51,7 @@
 #define ADXRS290_BANDPASS_FILTER  0x11
 #define ADXRS290_BPF_LPF_MASK     0x07
 #define ADXRS290_BPF_HPF_MASK     0xF0
-
+#define ADXRS290_BPF_HPF_OFFSET   0x4
 
 #define ADXRS290_DATA_READY_REG   0x12
 
@@ -72,29 +72,29 @@
  * Low-Pass Filter Pole Locations
  *  The data is the Frequency in Hz
  */
-#define ADXRS_LPF_480_HZ          0x00   // 480nis Default
-#define ADXRS_LPF_320_HZ          0x01   
-#define ADXRS_LPF_160_HZ          0x02   
-#define ADXRS_LPF_80_HZ           0x03   
-#define ADXRS_LPF_56_6_HZ         0x04   
-#define ADXRS_LPF_40_HZ           0x05   
-#define ADXRS_LPF_28_3_HZ         0x06   
-#define ADXRS_LPF_20_HZ           0x07   
+#define ADXRS_LPF_480_HZ          0x00   //  480_HZ is Default
+#define ADXRS_LPF_320_HZ          0x01   //  320_HZ
+#define ADXRS_LPF_160_HZ          0x02   //  160_HZ
+#define ADXRS_LPF_80_HZ           0x03   //  80_HZ
+#define ADXRS_LPF_56_6_HZ         0x04   //  56.6_HZ
+#define ADXRS_LPF_40_HZ           0x05   //  40 HZ
+#define ADXRS_LPF_28_3_HZ         0x06   //  28.3_HZ
+#define ADXRS_LPF_20_HZ           0x07   //  20_HZ
 
 /*
  * High-Pass Filter Pole Locations
  *  The data is the Frequency in Hz
  */
 #define ADXRS_HPF_ALL_HZ          0x00   // All Pass Default
-#define ADXRS_HPF_0_011_HZ        0x01   
-#define ADXRS_HPF_0_022_HZ        0x02   
-#define ADXRS_HPF_0_044_HZ        0x03   
-#define ADXRS_HPF_0_087_HZ        0x04   
-#define ADXRS_HPF_0_175_HZ        0x05   
-#define ADXRS_HPF_0_350_HZ        0x06   
-#define ADXRS_HPF_0_700_HZ        0x07   
-#define ADXRS_HPF_1_400_HZ        0x08   
-#define ADXRS_HPF_2_800_HZ        0x09   
-#define ADXRS_HPF_11_30_HZ        0x0A   
+#define ADXRS_HPF_0_011_HZ        0x01   //  0.011_Hz
+#define ADXRS_HPF_0_022_HZ        0x02   //  0.022_Hz
+#define ADXRS_HPF_0_044_HZ        0x03   //  0.044_Hz  
+#define ADXRS_HPF_0_087_HZ        0x04   //  0.087_Hz  
+#define ADXRS_HPF_0_175_HZ        0x05   //  0.187_Hz   
+#define ADXRS_HPF_0_350_HZ        0x06   //  0.350_Hz
+#define ADXRS_HPF_0_700_HZ        0x07   //  0.700_Hz
+#define ADXRS_HPF_1_400_HZ        0x08   //  1.400_Hz 
+#define ADXRS_HPF_2_800_HZ        0x09   //  2.800_Hz 
+#define ADXRS_HPF_11_30_HZ        0x0A   // 11.300_Hz 
 
 #endif /* ADXRS290_H_ */

@@ -14,13 +14,43 @@ adiGyroscope	     KEYWORD3
 #######################################
 # Methods and Functions (KEYWORD2)
 #######################################
-begin            KEYWORD2
-readX            KEYWORD2
-readY	         KEYWORD2
-activate	     KEYWORD2
-deactivate	     KEYWORD2
+
+setStandbyMode       KEYWORD2
+setMeasurementMode   KEYWORD2
+isStandbyMode        KEYWORD2
+setLowPassFilter     KEYWORD2
+setHighPassFilter    KEYWORD2
+getLowPassFilter     KEYWORD2
+getHighPassFilter    KEYWORD2
+interruptModeEnable  KEYWORD2
+tempSensorEnable     KEYWORD2
+readXY               KEYWORD2
+readTemperature      KEYWORD2
+check                KEYWORD2
+readRegister         KEYWORD2
+writeRegister        KEYWORD2
 
 #######################################
 # Constants (LITERAL1)
 #######################################
 
+ADXRS_LPF_480_HZ     LITERAL1
+ADXRS_LPF_320_HZ     LITERAL1
+ADXRS_LPF_160_HZ     LITERAL1
+ADXRS_LPF_80_HZ      LITERAL1
+ADXRS_LPF_56_6_HZ    LITERAL1
+ADXRS_LPF_40_HZ      LITERAL1
+ADXRS_LPF_28_3_HZ    LITERAL1
+ADXRS_LPF_20_HZ      LITERAL1
+
+ADXRS_HPF_ALL_HZ     LITERAL1
+ADXRS_HPF_0_011_HZ   LITERAL1
+ADXRS_HPF_0_022_HZ   LITERAL1
+ADXRS_HPF_0_044_HZ   LITERAL1
+ADXRS_HPF_0_087_HZ   LITERAL1
+ADXRS_HPF_0_175_HZ   LITERAL1
+ADXRS_HPF_0_350_HZ   LITERAL1
+ADXRS_HPF_0_700_HZ   LITERAL1
+ADXRS_HPF_1_400_HZ   LITERAL1
+ADXRS_HPF_2_800_HZ   LITERAL1
+ADXRS_HPF_11_30_HZ   LITERAL1

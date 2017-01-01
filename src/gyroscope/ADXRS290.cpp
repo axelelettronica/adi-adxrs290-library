@@ -5,28 +5,30 @@
  *  Author: searobin
  */
 
-#include "ADXRS290Reg.h"
+
 #include "ADXRS290.h"
 #include <SPI.h>
 
 const byte READ  = 0b10000000;     // read command
 const byte WRITE = 0b01111111;     // write command
 
+#define READBUF_SIZE  8
+static byte readBuf[READBUF_SIZE] = {};
+
+static const SPISettings adxrs290_SPISettings(1000000L, MSBFIRST, SPI_MODE3);
 
 //Read from or write to register from the SCP1000:
 unsigned int 
-ADXRS290::readRegister(byte thisRegister, int bytesToRead) {
+ADXRS290::readByteInternal(byte thisRegister, int bytesToRead) {
     byte inByte = 0;           // incoming byte from the SPI
     unsigned int result = 0;   // result to return
- 
-    delay(100);
+
     // now combine the address and the command into one byte
     volatile byte dataToSend = thisRegister | READ;
-   _spi->beginTransaction(SPISettings(5000000, MSBFIRST, SPI_MODE3));
-    
+   _spi->beginTransaction(adxrs290_SPISettings);
+   
     // take the chip select low to select the device:
     digitalWrite(_ss, LOW);
-    delay(2);
     // send the device the register you want to read:
     _spi->transfer(dataToSend);
     // send a value of 0 to read the first byte returned:
@@ -46,26 +48,54 @@ ADXRS290::readRegister(byte thisRegister, int bytesToRead) {
 
     // take the chip select high to de-select:
     digitalWrite(_ss, HIGH);
-
+    delayMicroseconds(1);
     _spi->endTransaction();
     return (result);
+} 
+
+unsigned int
+ADXRS290::readNBytesInternal(byte startRegister, byte buffer[], int bytesToRead) {
+    
+    // now combine the address and the command into one byte
+    volatile byte dataToSend = startRegister | READ;
+    _spi->beginTransaction(adxrs290_SPISettings);
+    
+    // take the chip select low to select the device:
+    digitalWrite(_ss, LOW);
+    // send the device the register you want to read:
+    _spi->transfer(dataToSend);
+    // send a value of 0 to read the first byte returned:
+    buffer[bytesToRead-1] = _spi->transfer(0x00);
+    // decrement the number of bytes left to read:
+    bytesToRead--;
+    // if you still have another byte to read:
+    while (bytesToRead > 0) {
+        buffer[bytesToRead-1] = _spi->transfer(0x00);
+        // decrement the number of bytes left to read:
+        bytesToRead--;
+    }
+
+    // take the chip select high to de-select:
+    digitalWrite(_ss, HIGH);
+    delayMicroseconds(1);
+    _spi->endTransaction();
+    return (0);
 }
 
+
 void 
-ADXRS290::writeRegister(byte thisRegister, byte thisValue) {
+ADXRS290::writeByteInternal(byte thisRegister, byte thisValue) {
 
   // now combine the register address and the command into one byte:
-  byte dataToSend = thisRegister & WRITE;
-
-  delay(100); 
-  _spi->beginTransaction(SPISettings(5000000, MSBFIRST, SPI_MODE3));
-
+  byte dataToSend = thisRegister;// & WRITE;
+  byte data[2];
+  data[0] = dataToSend;
+  data[1] = thisValue;
+  _spi->beginTransaction(adxrs290_SPISettings);
+  
   // take the chip select low to select the device:
   digitalWrite(_ss, LOW);
-  //delay(2);
-  _spi->transfer(dataToSend); //Send register location
-  _spi->transfer(thisValue);  //Send value to record into register
-  // take the chip select high to de-select:
+  _spi->transfer(data, 2);
   digitalWrite(_ss, HIGH);
   
   _spi->endTransaction();
@@ -73,131 +103,265 @@ ADXRS290::writeRegister(byte thisRegister, byte thisValue) {
 }
 
 
+
 uint8_t
-ADXRS290::readByteInternal(uint8_t address)
+ADXRS290::readNRegisters(byte address, byte buffer[], int bytesToRead)
 {
-    return (uint8_t) readRegister(address, 1);
+    return (uint8_t) readNBytesInternal(address, buffer, bytesToRead);
+}
+
+
+uint8_t
+ADXRS290::readRegister(uint8_t address)
+{
+    return (uint8_t) readByteInternal(address, 1);
 }
 
 void
-ADXRS290::writeByteInternal(uint8_t address, uint8_t data)
+ADXRS290::writeRegister (uint8_t address, uint8_t data)
 {
-   writeRegister(address, data);
+   writeByteInternal(address, data);
 }
 
-
-/**** *************************************************************************/
+/*****************************************************************************/
 /*                                 Gyroscope                                 */
 /*****************************************************************************/
-char ADXRS290::begin(uint8_t ss, SPIClass *spi,  uint8_t irq)
+ADXRS290::ADXRS290()
+{
+
+    _address = 0;
+    _ss = 0;
+    _irq = 0;
+    _spi = NULL;
+    _sn = 0;
+    _rev = 0;
+}    
+
+bool ADXRS290::check(void)
 {
     volatile uint8_t data;
+    volatile int i = 0;
+        
+    data = readRegister(ADXRS290_ANALOG_ID);
+    if (data != ADXRS290_ANALOG_ID_RETURN){
+        // Wrong Device ID
+        return false;
+    }
+
+    data = readRegister(ADXRS290_MEMS_ID);
+    if (data != ADXRS290_MEMS_ID_RETURN){
+        // Wrong MEMS ID
+        return false;
+    }
+
+    data = readRegister(ADXRS290_DEV_ID);
+    if (data != ADXRS290_DEV_ID_RETURN){
+        // Wrong MEMS ID
+        return false;
+    }
+    _rev = readRegister(ADXRS290_REV_NUM);
+
+    if (_rev == 0) {
+        return false;
+    }
     
+    // reading Serial NUmber
+    for (i = ADXRS290_SERIALNUM_START; i <= ADXRS290_SERIALNUM_END; ++i) {
+        data = readRegister(i);
+        _sn |= data << (8*(i-ADXRS290_SERIALNUM_START));
+    }
+    
+    if (_sn == 0) {
+        return false;
+    }
+    
+    return true;
+}
+char ADXRS290::begin(uint8_t ss, SPIClass *spi,  uint8_t irq)
+{    
     this->_irq = irq;   
     this->_spi = spi;
     this->_ss = ss;
-    
+    this->_isStandby = false;
+
     pinMode(_ss, OUTPUT);
     digitalWrite(_ss, HIGH);
-    
-    standbyModeEnable(false);
-    data = readByteInternal(ADXRS290_ANALOG_ID);  
-    if (data != ADXRS290_ANALOG_ID_RETURN){
-        // Wrong Device ID
+    pinMode(_irq, OUTPUT);
+    digitalWrite(_irq, LOW);
+
+    if (check() == false) {
         return -1;
     }
 
-    data = readByteInternal(ADXRS290_MEMS_ID);  
-    if (data != ADXRS290_MEMS_ID_RETURN){
-        // Wrong MEMS ID
-        return -1;
-    }
-
+    tempSensorEnable(false);
+    setStandby(true); 
     return 0;
 }
 
 void 
-ADXRS290::standbyModeEnable(bool standByMode)
+ADXRS290::setStandby(bool standByMode)
 {
-    uint8_t data;
-
-    data = readByteInternal(ADXRS290_POW_CTRL_REG);  
+    volatile uint8_t data;
+    bool change = false;
     
-    if(standByMode) {
-        data |= ADXRS290_POW_CTRL_STDBY_MASK;
+    _isStandby = standByMode;
+    data = readRegister(ADXRS290_POW_CTRL_REG);  
+    
+    if (data & ADXRS290_POW_CTRL_STDBY_MASK) {
+        // current status on -> setting standby
+        if (standByMode) {
+             data &= ~ADXRS290_POW_CTRL_STDBY_MASK;
+
+             change = true;
+        }
     } else {
-        data &= ~ADXRS290_POW_CTRL_STDBY_MASK;
+        // current status off -> setting measurement mode
+        if (!standByMode) {
+             data |= ADXRS290_POW_CTRL_STDBY_MASK; 
+             change = true;
+        }
     }
-    writeByteInternal(ADXRS290_POW_CTRL_REG, data);
+    if(change) {
+        writeRegister(ADXRS290_POW_CTRL_REG, data);
+        delay(100);
+    }
 }
+
 
 void 
 ADXRS290::interruptModeEnable(bool activate)
 {
-    uint8_t data;
+    volatile uint8_t data;
 
-    data = readByteInternal(ADXRS290_DATA_READY_REG);  
+    data = readRegister(ADXRS290_DATA_READY_REG);  
     
     data &= ~ADXRS290_DATA_READY_INT_MASK;
     if(activate) {
         data |=  0x01;
     }
-    writeByteInternal(ADXRS290_DATA_READY_REG, data);
+    writeRegister(ADXRS290_DATA_READY_REG, data);
 }
 
+int 
+ADXRS290::getLowPassFilter(void)
+{
+    volatile uint8_t data;
+
+    data = readRegister(ADXRS290_BANDPASS_FILTER);  
+    return (data & ADXRS290_BPF_LPF_MASK);
+}
 
 void 
 ADXRS290::setLowPassFilter(int lowFreqPole)
 {
-    uint8_t data;
+    volatile uint8_t data;
 
-    data = readByteInternal(ADXRS290_BANDPASS_FILTER);  
+    data = readRegister(ADXRS290_BANDPASS_FILTER);  
     data &= ~ADXRS290_BPF_LPF_MASK;
     data |= (lowFreqPole & ADXRS290_BPF_LPF_MASK); 
-    writeByteInternal(ADXRS290_BANDPASS_FILTER, data);
+    writeRegister(ADXRS290_BANDPASS_FILTER, data);
+}
+
+int 
+ADXRS290::getHighPassFilter(void)
+{
+    volatile uint8_t data;
+
+    data = readRegister(ADXRS290_BANDPASS_FILTER);  
+    return ((data & ADXRS290_BPF_HPF_MASK) >> ADXRS290_BPF_HPF_OFFSET);
 }
 
 void 
 ADXRS290::setHighPassFilter(int highFreqPole)
 {
-    uint8_t data;
+    volatile uint8_t data;
 
-    data = readByteInternal(ADXRS290_BANDPASS_FILTER);  
+    data = readRegister(ADXRS290_BANDPASS_FILTER);  
     data &= ~ADXRS290_BPF_HPF_MASK;
-    data |= (highFreqPole & ADXRS290_BPF_HPF_MASK); 
-    writeByteInternal(ADXRS290_BANDPASS_FILTER, data);
+    data |= ((highFreqPole << ADXRS290_BPF_HPF_OFFSET) & 
+              ADXRS290_BPF_HPF_MASK); 
+    writeRegister(ADXRS290_BANDPASS_FILTER, data);
 }
 
 
 void 
 ADXRS290::tempSensorEnable(bool enable)
 {
-    uint8_t data;
+    volatile uint8_t data;
 
-    data = readByteInternal(ADXRS290_POW_CTRL_REG);  
+    data = readRegister(ADXRS290_POW_CTRL_REG);  
     
     data &= ~ADXRS290_POW_CTRL_TEMP_EN_MASK;
     if(enable) {
         data |=  ADXRS290_POW_CTRL_TEMP_EN_MASK;
     }
-    writeByteInternal(ADXRS290_POW_CTRL_REG, data);
+    writeRegister(ADXRS290_POW_CTRL_REG, data);   
 }
 
+
+
+void
+ADXRS290::readXY(float *x, float *y)
+{
+    volatile int16_t i16x, i16y;
+    volatile uint16_t data = 0;
+    
+    if (isStandbyMode()) {
+        return standbyReadXY(x, y);
+    }
+    
+    readNRegisters(ADXRS290_GYR_X_L, readBuf, 4);
+    data = readBuf[3];
+    data |= (0xFF & readBuf[2]) << 8; // MSB
+    // CONVERT 12 bit, into 2 complement
+    i16x = (int16_t)data;
+    
+    data = readBuf[1];
+    data |= (0xFF & readBuf[0]) << 8; // MSB
+    // CONVERT 12 bit, into 2 complement
+    i16y = (int16_t)data;
+    
+    *x  = (float) i16x / 200.0; // sensitivity 1/200 per LSB
+    *y  = (float) i16y / 200.0;
+} 
+
+   
+float
+ADXRS290::readTemperature()
+{    
+    int16_t signed_data = 0;
+    volatile uint16_t data = 0;
+
+    if (isStandbyMode()) {
+        return standbyReadTemperature();
+    }
+    
+    readNRegisters(ADXRS290_TEMP_L, readBuf, 2);
+    data = readBuf[1];
+    data |= (0x0F & readBuf[0]) << 8; // MSB
+
+    // CONVERT 12 bit, into 2 complement
+    signed_data = (int16_t)data;
+        
+    // Decode Temp measurement 
+    return (((float)signed_data)/10.0);
+}
+
+/*****************************************************************************/
+/*                Methods that can be used in standby Mode                   */
+/*****************************************************************************/
 
 
 int
 ADXRS290::readX()
 {
-    uint16_t data = 0;
-    uint8_t lsb = 0;
-    uint8_t msb = 0;
+    volatile uint16_t data = 0;
+    volatile uint8_t lsb = 0;
+    volatile uint8_t msb = 0;
     int16_t signed_data = 0;
 
-    // send the device the register you want to read:  
-    _spi->transfer(ADXRS290_GYR_X_L);  
-    // send a value of 0 to read the first byte returned:  
-    lsb = _spi->transfer(0xFF); 
-    msb = _spi->transfer(0xFF); 
+    lsb = readRegister(ADXRS290_GYR_X_L);
+    msb = readRegister(ADXRS290_GYR_X_H);
 
     data = lsb;
     data |= msb << 8; // MSB
@@ -211,16 +375,13 @@ ADXRS290::readX()
 int
 ADXRS290::readY()
 {
-    uint16_t data = 0;
-    uint8_t lsb = 0;
-    uint8_t msb = 0;
+    volatile uint16_t data = 0;
+    volatile uint8_t lsb = 0;
+    volatile uint8_t msb = 0;
     int16_t signed_data = 0;
 
-    // send the device the register you want to read:  
-    _spi->transfer(ADXRS290_GYR_Y_L);  
-    // send a value of 0 to read the first byte returned:  
-    lsb = _spi->transfer(0xFF); 
-    msb = _spi->transfer(0xFF); 
+    lsb = readRegister(ADXRS290_GYR_Y_L);
+    msb = readRegister(ADXRS290_GYR_Y_H);
 
     data = lsb;
     data |= msb << 8; // MSB
@@ -230,31 +391,40 @@ ADXRS290::readY()
     return signed_data;
 }
 
-
 float
-ADXRS290::readTemperature()
+ADXRS290::standbyReadTemperature()
 {
-    uint16_t data = 0;
-    uint8_t lsb = 0;
-    uint8_t msb = 0;
     int16_t signed_data = 0;
+    volatile uint16_t data = 0;    
+    volatile uint8_t lsb = 0;
+    volatile uint8_t msb = 0;
 
-    // send the device the register you want to read:  
-    _spi->transfer(ADXRS290_TEMP_L);  
-    // send a value of 0 to read the first byte returned:  
-    lsb = _spi->transfer(0xFF); 
-    msb = _spi->transfer(0xFF); 
+    // In standby we can read one byte at the time
+    lsb = readRegister(ADXRS290_TEMP_L);
+    msb = readRegister(ADXRS290_TEMP_H);
+
 
     data = lsb;
     data |= (0xFF & msb) << 8; // MSB
 
-    // HOW CONVERT 12 bit complemetn 2 ???
+    // CONVERT 12 bit, into 2 complement
     signed_data = (int16_t)data;
-
-
-    // Decode Temp measurement 
+    
+    // Decode Temp measurement
     return (((float)signed_data)/10.0);
 }
 
+void
+ADXRS290::standbyReadXY(float *x, float *y)
+{
+    volatile int16_t i16x, i16y;
+   
+    // In standby we can read one byte at the time
+    i16x = readX();
+    i16y = readY();
+    
+    *x  = (float) i16x / 200.0; // sensitivity 1/200 per LSB
+    *y  = (float) i16y / 200.0;
+}
 
 ADXRS290 adiGyroscope;

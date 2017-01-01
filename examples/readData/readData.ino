@@ -1,5 +1,5 @@
 /*
-    ADI ADXRS290 Library - get gyroscope information
+    ADI ADXRS290 Library - get gyroscope X-Y Axises and temperature values
 
     This example shows how to retrieve the x,y,z values 
     from the ADXRS290 gyroscope information
@@ -7,7 +7,7 @@
     Created 2 November 2016 by Seve (seve@ioteam.it)
 
     This example is in the public domain
-    https://github.com/axelelettronica
+    https://github.com/axelelettronica/adi-adxrs290-library
 
     more information available here:
     http://www.analog.com/en/products/mems/mems-gyroscopes/adxrs290.html
@@ -18,43 +18,58 @@
 #include <SPI.h>
 #include <ADXRS290.h>
 
-float x, y;
-float temp = 0;
+volatile uint32_t i = 0;
+float x, y, z;
+float temp;
 
+bool led = false;
+#define TRIGGER_LED  digitalWrite(PIN_LED, led ? 225 : 0); \
+                     led =!led
 
 void setup(void)
 {
-    SerialUSB.begin(115200);
-
+    Serial.begin(115200);
+    
     SPI1.begin();
-    delay(1000);
+    adiGyroscope.begin(ADXRS290_CS, &SPI1, ADXRS290_EINT); 
 
-    // Stop the execution till a Serial console is connected
-    while (!SerialUSB) {
-        ;
+    pinMode(PIN_LED, OUTPUT);
+    digitalWrite(PIN_LED, HIGH);
+    
+    // Waiting for the console to continue
+    while (!Serial) {
+   	;
     }
 
-    adiGyroscope.begin(ADXRS290_CS, &SPI1, ADXRS290_EINT);
-    adiGyroscope.standbyModeEnable(false);
     adiGyroscope.tempSensorEnable(true);
 }
 
 
 
-
 void loop(void)
 {    
-    temp = adiGyroscope.readTemperature();
-    SerialUSB.print("Temperature = ");
+    if (!(i%5)) {
+        TRIGGER_LED;
         
-    SerialUSB.print(temp); 
-    x = adiGyroscope.readX();
-    SerialUSB.print("\tX axis = ");
-    SerialUSB.print(x);
-    y = adiGyroscope.readY();
-    SerialUSB.print("\tY axis = ");
-    SerialUSB.println(y);            
-
-    delay(1000);
+        adiGyroscope.setMeasurementMode();
+        
+        adiGyroscope.readXY(&x, &y);
+        Serial.print("\tX / Y =  ");
+        Serial.print(x);
+        Serial.print(" / ");
+        Serial.print(y); 
+        Serial.print("  deg/s");
+        
+        if (!(i%100)) {
+            temp = adiGyroscope.readTemperature();       
+            Serial.print("\tTemperature = ");
+            Serial.println(temp);
+        } else {
+            Serial.print("\n");            
+        }
+        adiGyroscope.setStandbyMode();
+    }   
+    ++i;
+    delay(10);
 }
 
