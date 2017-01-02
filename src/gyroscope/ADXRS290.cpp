@@ -186,8 +186,9 @@ char ADXRS290::begin(uint8_t ss, SPIClass *spi,  uint8_t irq)
 
     pinMode(_ss, OUTPUT);
     digitalWrite(_ss, HIGH);
-    pinMode(_irq, OUTPUT);
-    digitalWrite(_irq, LOW);
+   // pinMode(_irq, OUTPUT);
+   // digitalWrite(_irq, LOW);
+    pinMode(_irq, INPUT);
 
     if (check() == false) {
         return -1;
