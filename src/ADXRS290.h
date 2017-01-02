@@ -9,7 +9,7 @@
 #define __ADXRS290_H__
 
 #include <Arduino.h>
-#include "ADXRS290Reg.h"
+#include "gyroscope/ADXRS290Reg.h"
 #include <SPI.h>
 
 class ADXRS290
